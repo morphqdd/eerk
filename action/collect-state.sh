@@ -35,11 +35,14 @@ if bp="$(gh api "repos/$repo/branches/$branch/protection" 2>/dev/null)"; then
       "$(jq '.required_status_checks.contexts // null' <<<"$bp")"
 fi
 
-# Labels -> label.<name> = true.
+# Labels -> label.<name> = true, plus a sentinel marking the set complete.
+# The sentinel lets the checker treat an absent required label as drift
+# (closed-world) rather than "could not verify".
 if labels="$(gh api "repos/$repo/labels" --paginate 2>/dev/null)"; then
   while read -r name; do
     [ -n "$name" ] && put "label.$name" true
   done < <(jq -r '.[].name' <<<"$labels")
+  put "__labels_collected__" true
 fi
 
 echo "$state" > state.json

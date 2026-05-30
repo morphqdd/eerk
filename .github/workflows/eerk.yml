@@ -9,7 +9,7 @@ jobs:
   baseline-check:
     runs-on: ubuntu-latest
     env:
-      TEMPLATE_REPO: morphqdd/eerk-baseline
+      TEMPLATE_REPO: 0nybl/eerk-baseline
       BASELINE_TAG: v1
       DRIFT_LABEL: repo-drift
     steps:
@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
 
       - name: Install eerk
-        run: cargo install --git https://github.com/morphqdd/eerk --tag v0.1.0 eerk
+        run: cargo install --git https://github.com/0nybl/eerk --tag v0.1.1 eerk
 
       - name: Collect settings
         run: bash baseline-src/action/collect-state.sh
@@ -64,6 +64,8 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
+          gh label create "$DRIFT_LABEL" --color B60205 \
+            --description "Repo drifted from baseline" --force >/dev/null 2>&1 || true
           existing="$(gh issue list --label "$DRIFT_LABEL" --state open \
             --json number --jq '.[0].number')"
           if [ "${{ steps.check.outputs.drift }}" = "1" ]; then

@@ -61,6 +61,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh label create "$DRIFT_LABEL" --color B60205 \
+            --description "Repo drifted from baseline" --force >/dev/null 2>&1 || true
           existing="$(gh issue list --label "$DRIFT_LABEL" --state open \
             --json number --jq '.[0].number')"
           if [ "${{ steps.check.outputs.drift }}" = "1" ]; then

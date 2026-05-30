@@ -87,7 +87,10 @@ mod tests {
         let base = tempfile::tempdir().unwrap();
         let repo = tempfile::tempdir().unwrap();
         write(repo.path(), "ci.yml", "X"); // baseline has no ci.yml
-        let rules = vec![FileRule { path: "ci.yml".into(), mode: FileMode::Exact }];
+        let rules = vec![FileRule {
+            path: "ci.yml".into(),
+            mode: FileMode::Exact,
+        }];
         let f = check(&rules, base.path(), repo.path());
         assert_eq!(f.drifted, vec!["ci.yml".to_string()]);
     }

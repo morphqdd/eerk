@@ -4,7 +4,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   baseline-check:
@@ -14,6 +13,13 @@ jobs:
       BASELINE_TAG: v1
       DRIFT_LABEL: repo-drift
     steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.EERK_APP_ID }}
+          private-key: ${{ secrets.EERK_APP_PRIVATE_KEY }}
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -21,7 +27,7 @@ jobs:
         run: |
           gh repo clone "$TEMPLATE_REPO" baseline-src -- --depth 1 --branch "$BASELINE_TAG"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
 
       - name: Install eerk
         run: cargo install --git https://github.com/morphqdd/eerk --tag v0.1.0 eerk
@@ -31,7 +37,7 @@ jobs:
         env:
           REPO: ${{ github.repository }}
           BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ secrets.EERK_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
 
       - name: Run check
         id: check
@@ -56,7 +62,7 @@ jobs:
 
       - name: Upsert tracking issue
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           existing="$(gh issue list --label "$DRIFT_LABEL" --state open \
             --json number --jq '.[0].number')"

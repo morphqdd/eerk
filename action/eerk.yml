@@ -46,7 +46,13 @@ jobs:
             --repo . \
             --state state.json \
             --out report.json
-          echo "drift=$?" >> "$GITHUB_OUTPUT"
+          code=$?
+          set -e
+          if [ "$code" -gt 1 ]; then
+            echo "eerk check failed with exit $code" >&2
+            exit "$code"
+          fi
+          echo "drift=$code" >> "$GITHUB_OUTPUT"
 
       - name: Render report
         run: eerk render --report report.json > body.md

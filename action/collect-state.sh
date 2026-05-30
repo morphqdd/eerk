@@ -15,6 +15,12 @@ if rep="$(gh api "repos/$repo" 2>/dev/null)"; then
   put "repo.default_branch"         "$(jq '.default_branch' <<<"$rep")"
   put "repo.delete_branch_on_merge" "$(jq '.delete_branch_on_merge' <<<"$rep")"
   put "repo.allow_merge_commit"     "$(jq '.allow_merge_commit' <<<"$rep")"
+  # secret scanning: present only with admin scope; absent -> unknown.
+  sa="$(jq -c '.security_and_analysis // empty' <<<"$rep")"
+  if [ -n "$sa" ]; then
+    put "security.secret_scanning" \
+        "$(jq '(.secret_scanning.status // "") == "enabled"' <<<"$sa")"
+  fi
 fi
 
 # Branch protection (needs administration:read; absent keys -> "unknown").

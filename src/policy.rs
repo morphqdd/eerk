@@ -5,6 +5,22 @@ use std::collections::BTreeMap;
 
 pub type State = BTreeMap<String, Value>;
 
+fn json_eq(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Array(x), Value::Array(y)) => {
+            if x.len() != y.len() {
+                return false;
+            }
+            let mut xs: Vec<String> = x.iter().map(|v| v.to_string()).collect();
+            let mut ys: Vec<String> = y.iter().map(|v| v.to_string()).collect();
+            xs.sort();
+            ys.sort();
+            xs == ys
+        }
+        _ => a == b,
+    }
+}
+
 pub fn check(policy: &Policy, state: &State) -> Vec<PolicyFinding> {
     expectations(policy)
         .into_iter()
@@ -15,7 +31,7 @@ pub fn check(policy: &Policy, state: &State) -> Vec<PolicyFinding> {
                 actual: Value::Null,
                 status: PolicyStatus::Unknown,
             },
-            Some(actual) if *actual == e.expected => PolicyFinding {
+            Some(actual) if json_eq(actual, &e.expected) => PolicyFinding {
                 rule: e.key,
                 expected: e.expected,
                 actual: actual.clone(),
@@ -78,6 +94,19 @@ secret_scanning = true
             .unwrap();
         assert_eq!(f.status, PolicyStatus::Drift);
         assert_eq!(f.actual, json!("public"));
+    }
+
+    #[test]
+    fn array_order_does_not_matter() {
+        let p = parse("[policy.branch_protection.main]\nrequired_checks = [\"build\", \"test\"]\n")
+            .unwrap()
+            .policy;
+        let s = state(&[(
+            "branch_protection.main.required_checks",
+            json!(["test", "build"]),
+        )]);
+        let findings = check(&p, &s);
+        assert!(findings.iter().all(|f| f.status == PolicyStatus::Ok));
     }
 
     #[test]

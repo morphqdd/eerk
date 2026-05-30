@@ -1,0 +1,31 @@
+[[file]]
+path = ".github/workflows/ci.yml"
+mode = "exact"
+
+[[file]]
+path = "LICENSE"
+mode = "presence"
+
+[[file]]
+path = "rustfmt.toml"
+mode = "exact"
+
+[policy.branch_protection.main]
+enforce_admins = true
+linear_history = true
+required_reviews = 1
+required_checks = ["build", "test", "clippy"]
+
+[policy.repo]
+visibility = "private"
+default_branch = "main"
+delete_branch_on_merge = true
+allow_merge_commit = false
+
+[policy.security]
+secret_scanning = true
+
+[[policy.label]]
+name = "puzzle"
+[[policy.label]]
+name = "bug"

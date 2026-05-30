@@ -21,28 +21,33 @@ fn json_eq(a: &Value, b: &Value) -> bool {
     }
 }
 
+const LABELS_COLLECTED: &str = "__labels_collected__";
+
 pub fn check(policy: &Policy, state: &State) -> Vec<PolicyFinding> {
+    let labels_collected = matches!(state.get(LABELS_COLLECTED), Some(Value::Bool(true)));
     expectations(policy)
         .into_iter()
-        .map(|e| match state.get(&e.key) {
-            None => PolicyFinding {
+        .map(|e| {
+            let present = matches!(state.get(&e.key), Some(v) if !v.is_null());
+            let (actual, status) = if present {
+                let a = state.get(&e.key).unwrap().clone();
+                let status = if json_eq(&a, &e.expected) {
+                    PolicyStatus::Ok
+                } else {
+                    PolicyStatus::Drift
+                };
+                (a, status)
+            } else if e.key.starts_with("label.") && labels_collected {
+                (Value::Bool(false), PolicyStatus::Drift)
+            } else {
+                (Value::Null, PolicyStatus::Unknown)
+            };
+            PolicyFinding {
                 rule: e.key,
                 expected: e.expected,
-                actual: Value::Null,
-                status: PolicyStatus::Unknown,
-            },
-            Some(actual) if json_eq(actual, &e.expected) => PolicyFinding {
-                rule: e.key,
-                expected: e.expected,
-                actual: actual.clone(),
-                status: PolicyStatus::Ok,
-            },
-            Some(actual) => PolicyFinding {
-                rule: e.key,
-                expected: e.expected,
-                actual: actual.clone(),
-                status: PolicyStatus::Drift,
-            },
+                actual,
+                status,
+            }
         })
         .collect()
 }
@@ -120,5 +125,56 @@ secret_scanning = true
             .unwrap();
         assert_eq!(f.status, PolicyStatus::Unknown);
         assert_eq!(f.actual, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn null_actual_is_unknown() {
+        let p = parse("[policy.repo]\nallow_merge_commit = false\n")
+            .unwrap()
+            .policy;
+        let s = state(&[("repo.allow_merge_commit", serde_json::Value::Null)]);
+        let f = check(&p, &s);
+        let x = f
+            .iter()
+            .find(|f| f.rule == "repo.allow_merge_commit")
+            .unwrap();
+        assert_eq!(x.status, PolicyStatus::Unknown);
+    }
+
+    #[test]
+    fn missing_label_is_drift_when_labels_collected() {
+        let p = parse("[[policy.label]]\nname = \"puzzle\"\n")
+            .unwrap()
+            .policy;
+        let s = state(&[
+            ("__labels_collected__", json!(true)),
+            ("label.bug", json!(true)),
+        ]);
+        let f = check(&p, &s);
+        let x = f.iter().find(|f| f.rule == "label.puzzle").unwrap();
+        assert_eq!(x.status, PolicyStatus::Drift);
+        assert_eq!(x.actual, json!(false));
+    }
+
+    #[test]
+    fn present_label_is_ok() {
+        let p = parse("[[policy.label]]\nname = \"bug\"\n").unwrap().policy;
+        let s = state(&[
+            ("__labels_collected__", json!(true)),
+            ("label.bug", json!(true)),
+        ]);
+        let f = check(&p, &s);
+        assert!(f.iter().all(|f| f.status == PolicyStatus::Ok));
+    }
+
+    #[test]
+    fn missing_label_is_unknown_when_not_collected() {
+        let p = parse("[[policy.label]]\nname = \"puzzle\"\n")
+            .unwrap()
+            .policy;
+        let s = state(&[]);
+        let f = check(&p, &s);
+        let x = f.iter().find(|f| f.rule == "label.puzzle").unwrap();
+        assert_eq!(x.status, PolicyStatus::Unknown);
     }
 }

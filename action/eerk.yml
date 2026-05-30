@@ -1,0 +1,69 @@
+name: eerk
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  baseline-check:
+    runs-on: ubuntu-latest
+    env:
+      TEMPLATE_REPO: OWNER/template-repo   # set per fleet
+      BASELINE_TAG: v1                      # pinned baseline version
+      DRIFT_LABEL: repo-drift
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch baseline
+        run: |
+          gh repo clone "$TEMPLATE_REPO" baseline-src -- --depth 1 --branch "$BASELINE_TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install eerk
+        run: cargo install --git https://github.com/OWNER/eerk --tag v0.1.0 eerk
+
+      - name: Collect settings
+        run: bash baseline-src/action/collect-state.sh
+        env:
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+          # Use a PAT/App token with administration:read for full policy checks:
+          GH_TOKEN: ${{ secrets.EERK_ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Run check
+        id: check
+        run: |
+          set +e
+          eerk check \
+            --baseline baseline-src/baseline \
+            --manifest baseline-src/baseline.toml \
+            --repo . \
+            --state state.json \
+            --out report.json
+          echo "drift=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Render report
+        run: eerk render --report report.json > body.md
+
+      - name: Upsert tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing="$(gh issue list --label "$DRIFT_LABEL" --state open \
+            --json number --jq '.[0].number')"
+          if [ "${{ steps.check.outputs.drift }}" = "1" ]; then
+            if [ -n "$existing" ]; then
+              gh issue edit "$existing" --body-file body.md
+            else
+              gh issue create --title "Baseline drift detected" \
+                --label "$DRIFT_LABEL" --body-file body.md
+            fi
+          elif [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Baseline drift resolved. ✅"
+          fi

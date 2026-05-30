@@ -13,7 +13,11 @@ pub fn check(rules: &[FileRule], baseline: &Path, repo: &Path) -> FileFindings {
         }
         if rule.mode == FileMode::Exact {
             let base_path = baseline.join(&rule.path);
-            if hash(&base_path) != hash(&repo_path) {
+            let matches = match (hash(&base_path), hash(&repo_path)) {
+                (Some(a), Some(b)) => a == b,
+                _ => false,
+            };
+            if !matches {
                 findings.drifted.push(rule.path.clone());
             }
         }
@@ -76,6 +80,16 @@ mod tests {
         }];
         let f = check(&rules, base.path(), repo.path());
         assert!(f.drifted.is_empty() && f.missing.is_empty());
+    }
+
+    #[test]
+    fn exact_with_missing_baseline_is_drift() {
+        let base = tempfile::tempdir().unwrap();
+        let repo = tempfile::tempdir().unwrap();
+        write(repo.path(), "ci.yml", "X"); // baseline has no ci.yml
+        let rules = vec![FileRule { path: "ci.yml".into(), mode: FileMode::Exact }];
+        let f = check(&rules, base.path(), repo.path());
+        assert_eq!(f.drifted, vec!["ci.yml".to_string()]);
     }
 
     #[test]

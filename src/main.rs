@@ -36,7 +36,13 @@ enum Command {
 fn main() -> ExitCode {
     let cli = Cli::parse();
     match cli.command {
-        Command::Check { baseline, manifest: manifest_path, repo, state, out } => {
+        Command::Check {
+            baseline,
+            manifest: manifest_path,
+            repo,
+            state,
+            out,
+        } => {
             let m = manifest::parse(&fs::read_to_string(&manifest_path).expect("read manifest"))
                 .expect("parse manifest");
             let state_map: policy::State =
@@ -49,7 +55,10 @@ fn main() -> ExitCode {
                 .filter(|f| f.status != eerk::report::PolicyStatus::Ok)
                 .collect();
 
-            let report = Report { files: files_findings, policy: policy_findings };
+            let report = Report {
+                files: files_findings,
+                policy: policy_findings,
+            };
             fs::write(&out, serde_json::to_string_pretty(&report).unwrap()).expect("write report");
 
             if report.has_drift() {
@@ -59,8 +68,9 @@ fn main() -> ExitCode {
             }
         }
         Command::Render { report } => {
-            let r: Report = serde_json::from_str(&fs::read_to_string(&report).expect("read report"))
-                .expect("parse report.json");
+            let r: Report =
+                serde_json::from_str(&fs::read_to_string(&report).expect("read report"))
+                    .expect("parse report.json");
             print!("{}", render::render(&r));
             ExitCode::SUCCESS
         }

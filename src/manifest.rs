@@ -60,9 +60,11 @@ fn toml_to_json(v: &toml::Value) -> Json {
             .unwrap_or(Json::Null),
         toml::Value::Boolean(b) => Json::Bool(*b),
         toml::Value::Array(a) => Json::Array(a.iter().map(toml_to_json).collect()),
-        toml::Value::Table(t) => {
-            Json::Object(t.iter().map(|(k, v)| (k.clone(), toml_to_json(v))).collect())
-        }
+        toml::Value::Table(t) => Json::Object(
+            t.iter()
+                .map(|(k, v)| (k.clone(), toml_to_json(v)))
+                .collect(),
+        ),
         toml::Value::Datetime(d) => Json::String(d.to_string()),
     }
 }

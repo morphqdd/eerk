@@ -64,7 +64,10 @@ mod tests {
 
     #[test]
     fn clean_report_says_pass() {
-        let r = Report { files: FileFindings::default(), policy: vec![] };
+        let r = Report {
+            files: FileFindings::default(),
+            policy: vec![],
+        };
         let md = render(&r);
         assert!(md.contains("All baseline checks pass"));
     }

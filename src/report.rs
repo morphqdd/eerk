@@ -33,10 +33,7 @@ impl Report {
     pub fn has_drift(&self) -> bool {
         !self.files.missing.is_empty()
             || !self.files.drifted.is_empty()
-            || self
-                .policy
-                .iter()
-                .any(|p| p.status == PolicyStatus::Drift)
+            || self.policy.iter().any(|p| p.status == PolicyStatus::Drift)
     }
 }
 
@@ -48,7 +45,10 @@ mod tests {
     #[test]
     fn has_drift_true_on_missing_file() {
         let r = Report {
-            files: FileFindings { missing: vec!["LICENSE".into()], drifted: vec![] },
+            files: FileFindings {
+                missing: vec!["LICENSE".into()],
+                drifted: vec![],
+            },
             policy: vec![],
         };
         assert!(r.has_drift());

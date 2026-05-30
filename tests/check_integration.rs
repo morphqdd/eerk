@@ -17,7 +17,11 @@ fn check_produces_report_with_drift() {
     // repo missing LICENSE entirely
 
     let manifest = work.path().join("baseline.toml");
-    fs::write(&manifest, "[[file]]\npath = \"LICENSE\"\nmode = \"presence\"\n").unwrap();
+    fs::write(
+        &manifest,
+        "[[file]]\npath = \"LICENSE\"\nmode = \"presence\"\n",
+    )
+    .unwrap();
 
     let state = work.path().join("state.json");
     fs::write(&state, "{}").unwrap();
@@ -27,11 +31,16 @@ fn check_produces_report_with_drift() {
     let status = Command::new(env!("CARGO_BIN_EXE_eerk"))
         .args([
             "check",
-            "--baseline", base.path().to_str().unwrap(),
-            "--manifest", manifest.to_str().unwrap(),
-            "--repo", repo.path().to_str().unwrap(),
-            "--state", state.to_str().unwrap(),
-            "--out", report.to_str().unwrap(),
+            "--baseline",
+            base.path().to_str().unwrap(),
+            "--manifest",
+            manifest.to_str().unwrap(),
+            "--repo",
+            repo.path().to_str().unwrap(),
+            "--state",
+            state.to_str().unwrap(),
+            "--out",
+            report.to_str().unwrap(),
         ])
         .status()
         .unwrap();

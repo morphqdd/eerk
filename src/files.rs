@@ -31,8 +31,8 @@ fn hash(path: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::manifest::{FileMode, FileRule};
     use std::fs;
-    use crate::manifest::{FileRule, FileMode};
 
     fn write(dir: &std::path::Path, rel: &str, body: &str) {
         let p = dir.join(rel);
@@ -50,8 +50,14 @@ mod tests {
         write(repo.path(), "ci.yml", "B");
 
         let rules = vec![
-            FileRule { path: "ci.yml".into(), mode: FileMode::Exact },
-            FileRule { path: "LICENSE".into(), mode: FileMode::Presence },
+            FileRule {
+                path: "ci.yml".into(),
+                mode: FileMode::Exact,
+            },
+            FileRule {
+                path: "LICENSE".into(),
+                mode: FileMode::Presence,
+            },
         ];
         let f = check(&rules, base.path(), repo.path());
         assert_eq!(f.drifted, vec!["ci.yml".to_string()]);
@@ -64,7 +70,10 @@ mod tests {
         let repo = tempfile::tempdir().unwrap();
         write(base.path(), "ci.yml", "SAME");
         write(repo.path(), "ci.yml", "SAME");
-        let rules = vec![FileRule { path: "ci.yml".into(), mode: FileMode::Exact }];
+        let rules = vec![FileRule {
+            path: "ci.yml".into(),
+            mode: FileMode::Exact,
+        }];
         let f = check(&rules, base.path(), repo.path());
         assert!(f.drifted.is_empty() && f.missing.is_empty());
     }
@@ -75,7 +84,10 @@ mod tests {
         let repo = tempfile::tempdir().unwrap();
         write(base.path(), "LICENSE", "MIT");
         write(repo.path(), "LICENSE", "APACHE");
-        let rules = vec![FileRule { path: "LICENSE".into(), mode: FileMode::Presence }];
+        let rules = vec![FileRule {
+            path: "LICENSE".into(),
+            mode: FileMode::Presence,
+        }];
         let f = check(&rules, base.path(), repo.path());
         assert!(f.drifted.is_empty() && f.missing.is_empty());
     }

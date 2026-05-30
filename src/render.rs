@@ -1,11 +1,11 @@
 use crate::report::{PolicyStatus, Report};
 
 pub fn render(report: &Report) -> String {
-    if !report.has_drift() && report.policy.is_empty() {
-        return "## Eerk baseline check\n\n✅ All baseline checks pass.\n".to_string();
-    }
-
     let mut out = String::from("## Eerk baseline check\n\n");
+
+    if !report.has_drift() {
+        out.push_str("✅ All baseline checks pass.\n\n");
+    }
 
     if !report.files.missing.is_empty() {
         out.push_str("### Missing files\n");
@@ -70,6 +70,22 @@ mod tests {
         };
         let md = render(&r);
         assert!(md.contains("All baseline checks pass"));
+    }
+
+    #[test]
+    fn clean_with_unknown_shows_pass_and_could_not_verify() {
+        let r = Report {
+            files: FileFindings::default(),
+            policy: vec![PolicyFinding {
+                rule: "security.secret_scanning".into(),
+                expected: json!(true),
+                actual: Value::Null,
+                status: PolicyStatus::Unknown,
+            }],
+        };
+        let md = render(&r);
+        assert!(md.contains("All baseline checks pass"));
+        assert!(md.contains("Could not verify"));
     }
 
     #[test]

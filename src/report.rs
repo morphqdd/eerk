@@ -1,19 +1,19 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Report {
     pub files: FileFindings,
     pub policy: Vec<PolicyFinding>,
 }
 
-#[derive(Serialize, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct FileFindings {
     pub missing: Vec<String>,
     pub drifted: Vec<String>,
 }
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct PolicyFinding {
     pub rule: String,
     pub expected: Value,
@@ -21,7 +21,7 @@ pub struct PolicyFinding {
     pub status: PolicyStatus,
 }
 
-#[derive(Serialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum PolicyStatus {
     Ok,
